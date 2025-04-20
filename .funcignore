@@ -1,0 +1,6 @@
+node_modules/
+.git*
+.vscode/
+local.settings.json
+*.env
+*.log
