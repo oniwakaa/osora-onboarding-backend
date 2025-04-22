@@ -35,9 +35,9 @@ async function checkAdminStatus(userId, tenantId) {
 
 ## 2. Modifica a `saveConfiguration`
 
-Assicurarsi che la funzione `saveConfiguration` utilizzi il `currentTenantId` che è stato popolato durante `handleSuccessfulToken`. La chiamata a `/api/saveConfiguration` che invia il `tenantId` nel corpo rimane invariata.
+La funzione `saveConfiguration` sul backend è stata modificata per non dipendere più dall'header `x-ms-client-principal`. Ora accetta un parametro aggiuntivo `userDisplayName` nel corpo della richiesta.
 
-### Esempio:
+### Esempio di modifica nel frontend:
 
 ```javascript
 async function saveConfiguration(sharepointUrls) {
@@ -47,12 +47,17 @@ async function saveConfiguration(sharepointUrls) {
     throw new Error('Tentativo di salvare la configurazione senza tenantId');
   }
   
+  // Ottieni il nome utente dall'account MSAL
+  const currentAccount = msalInstance.getActiveAccount();
+  const userDisplayName = currentAccount ? currentAccount.name : 'Unknown User';
+  
   const response = await fetch('/api/saveConfiguration', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       tenantId: currentTenantId,
-      sharepointUrls: sharepointUrls
+      sharepointUrls: sharepointUrls,
+      userDisplayName: userDisplayName // Aggiungi il nome dell'utente
     })
   });
   
@@ -108,7 +113,7 @@ async function handleSuccessfulToken(response) {
 
 ## 5. Note Importanti
 
-- Le funzioni del frontend devono essere adattate in base alla struttura dell'app esistente
+- Le funzioni del backend sono state modificate per non dipendere più dall'header `x-ms-client-principal`
 - Assicurarsi che sia presente una gestione errori adeguata
 - Ricordarsi di passare `userId` e `tenantId` in tutti i punti dove `checkAdminStatus` viene chiamato
-- Il backend continua a verificare l'header `x-ms-client-principal` come controllo di sicurezza aggiuntivo 
+- Per `saveConfiguration`, assicurarsi di passare anche `userDisplayName` dal frontend 

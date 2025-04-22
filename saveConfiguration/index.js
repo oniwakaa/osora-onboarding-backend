@@ -23,7 +23,7 @@ module.exports = async function (context, req) {
         return;
     }
 
-    const { tenantId, sharepointUrls } = req.body;
+    const { tenantId, sharepointUrls, userDisplayName } = req.body;
 
     if (!tenantId || typeof tenantId !== 'string') {
         context.log.error('Invalid or missing tenantId in request body.');
@@ -54,39 +54,39 @@ module.exports = async function (context, req) {
         }
     });
 
-    // USER AUTHENTICATION SECTION
-    const clientPrincipalHeader = req.headers['x-ms-client-principal'];
-    if (!clientPrincipalHeader) {
-        context.log.error('Authentication header is missing.');
-        context.res = {
-            status: 401,
-            body: { error: "Authentication required." }
-        };
-        return;
-    }
+    // // USER AUTHENTICATION SECTION
+    // const clientPrincipalHeader = req.headers['x-ms-client-principal'];
+    // if (!clientPrincipalHeader) {
+    //     context.log.error('Authentication header is missing.');
+    //     context.res = {
+    //         status: 401,
+    //         body: { error: "Authentication required." }
+    //     };
+    //     return;
+    // }
 
-    let clientPrincipal;
-    try {
-        const decodedHeader = Buffer.from(clientPrincipalHeader, 'base64').toString('utf8');
-        clientPrincipal = JSON.parse(decodedHeader);
-        context.log(`User authenticated: ${clientPrincipal.userDetails}`);
-    } catch (error) {
-        context.log.error(`Error parsing authentication header: ${error.message}`);
-        context.res = {
-            status: 401,
-            body: { error: "Invalid authentication token." }
-        };
-        return;
-    }
+    // let clientPrincipal;
+    // try {
+    //     const decodedHeader = Buffer.from(clientPrincipalHeader, 'base64').toString('utf8');
+    //     clientPrincipal = JSON.parse(decodedHeader);
+    //     context.log(`User authenticated: ${clientPrincipal.userDetails}`);
+    // } catch (error) {
+    //     context.log.error(`Error parsing authentication header: ${error.message}`);
+    //     context.res = {
+    //         status: 401,
+    //         body: { error: "Invalid authentication token." }
+    //     };
+    //     return;
+    // }
 
-    if (!clientPrincipal || !clientPrincipal.userDetails) {
-        context.log.error('Invalid client principal data.');
-        context.res = {
-            status: 401,
-            body: { error: "Invalid authentication data." }
-        };
-        return;
-    }
+    // if (!clientPrincipal || !clientPrincipal.userDetails) {
+    //     context.log.error('Invalid client principal data.');
+    //     context.res = {
+    //         status: 401,
+    //         body: { error: "Invalid authentication data." }
+    //     };
+    //     return;
+    // }
 
     // AZURE STORAGE SECTION
     try {
@@ -117,7 +117,7 @@ module.exports = async function (context, req) {
             tenantId,
             sharepointSites: validUrls,
             timestamp: new Date().toISOString(),
-            updatedBy: clientPrincipal.userDetails
+            updatedBy: userDisplayName || 'Unknown User' // Use userDisplayName from request body if provided
         };
         
         // Upload to blob storage
