@@ -3,8 +3,6 @@
 # di distribuzione per Azure Functions. Funziona in modo simile a .gitignore.
 
 # Dipendenze Node.js (devono essere installate nell'ambiente Azure)
-node_modules/
-node_modules
 
 # Impostazioni locali e segreti (non distribuire mai!)
 local.settings.json
