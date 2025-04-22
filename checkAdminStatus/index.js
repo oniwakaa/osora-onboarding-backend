@@ -82,8 +82,13 @@ module.exports = async function (context, req) {
 
         const graphClient = Client.initWithMiddleware({ authProvider: authProvider });
 
-        // Use absolute URL with tenant ID instead of relative path
-        const graphApiUrl = `https://graph.microsoft.com/v1.0/users/${userId}/transitiveMemberOf/microsoft.graph.directoryRole`;
+        // Ensure tenantId is defined and non-empty before constructing the URL
+        if (!tenantId) {
+            throw new Error("tenantId is required for Graph API call");
+        }
+        
+        // Use absolute URL with tenant ID included in the path for proper multi-tenant support
+        const graphApiUrl = `https://graph.microsoft.com/v1.0/tenants/${tenantId}/users/${userId}/transitiveMemberOf/microsoft.graph.directoryRole`;
         context.log(`Calling Graph API using absolute URL: '${graphApiUrl}' with tenant ID: ${tenantId}`);
         
         const roleMembership = await graphClient
