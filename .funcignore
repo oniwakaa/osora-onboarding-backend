@@ -1,6 +1,54 @@
+# .funcignore
+# Questo file specifica quali file e cartelle escludere dal pacchetto
+# di distribuzione per Azure Functions. Funziona in modo simile a .gitignore.
+
+# Dipendenze Node.js (devono essere installate nell'ambiente Azure)
 node_modules/
-.git*
-.vscode/
+node_modules
+
+# Impostazioni locali e segreti (non distribuire mai!)
 local.settings.json
 *.env
+.env
+
+# Metadati e configurazione Git
+.git*
+.git/
+.gitignore
+.gitattributes
+
+# Impostazioni specifiche dell'editor/IDE
+.vscode/
+.vscode
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# File di log
 *.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# File di output della build o cache locali (se applicabile)
+dist/
+build/
+coverage/
+.npm/
+.cache/
+
+# File specifici del sistema operativo
+.DS_Store
+Thumbs.db
+
+# File di test (se non vuoi distribuirli)
+# tests/
+# *.test.js
+# *.spec.js
+
+# Altri file temporanei o di configurazione locale
+# (Aggiungi altri pattern specifici del tuo progetto se necessario)
+
