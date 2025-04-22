@@ -20,6 +20,7 @@ module.exports = async function (context, req) {
     context.log('JavaScript HTTP trigger function processed a request for checkAdminStatus.');
 
     let userId = null;
+    let tenantId = null;
     let isAdmin = false;
 
     const clientPrincipalHeader = req.headers['x-ms-client-principal'];
@@ -32,11 +33,28 @@ module.exports = async function (context, req) {
     try {
         const header = Buffer.from(clientPrincipalHeader, 'base64').toString('ascii');
         const clientPrincipal = JSON.parse(header);
+        
+        // Inspect the client principal structure
+        context.log(`Client principal structure: ${JSON.stringify(clientPrincipal, null, 2)}`);
+        
         userId = clientPrincipal.userId;
         context.log(`User OID extracted from header: ${userId}`);
 
         if (!userId) {
              throw new Error("UserID not found in client principal.");
+        }
+        
+        // Extract tenant ID from claims
+        if (clientPrincipal.claims && Array.isArray(clientPrincipal.claims)) {
+            const tidClaim = clientPrincipal.claims.find(claim => claim.typ === 'tid' || claim.type === 'tid');
+            if (tidClaim) {
+                tenantId = tidClaim.val || tidClaim.value;
+                context.log(`Tenant ID extracted from claims: ${tenantId}`);
+            }
+        }
+        
+        if (!tenantId) {
+            throw new Error("Tenant ID not found in client principal claims.");
         }
 
         // *** MODIFICA: Ottieni la credenziale SENZA parametri ***
@@ -64,10 +82,16 @@ module.exports = async function (context, req) {
 
         const graphClient = Client.initWithMiddleware({ authProvider: authProvider });
 
-        context.log(`Calling Graph API '/users/${userId}/transitiveMemberOf/microsoft.graph.directoryRole' to get directory roles...`);
-        const roleMembership = await graphClient.api(`/users/${userId}/transitiveMemberOf/microsoft.graph.directoryRole`)
+        // Use absolute URL with tenant ID instead of relative path
+        const graphApiUrl = `https://graph.microsoft.com/v1.0/users/${userId}/transitiveMemberOf/microsoft.graph.directoryRole`;
+        context.log(`Calling Graph API using absolute URL: '${graphApiUrl}' with tenant ID: ${tenantId}`);
+        
+        const roleMembership = await graphClient
+            .api(graphApiUrl)
+            .header('ConsistencyLevel', 'eventual')
             .select('id,displayName,roleTemplateId')
             .get();
+            
         context.log("Graph API call successful.");
 
         if (roleMembership && roleMembership.value && roleMembership.value.length > 0) {
@@ -91,7 +115,7 @@ module.exports = async function (context, req) {
     } catch (error) {
         // Logging dell'errore migliorato
         context.log.error("-------------------- ERROR Start --------------------");
-        context.log.error(`Error in checkAdminStatus for user ${userId || 'UNKNOWN'}`);
+        context.log.error(`Error in checkAdminStatus for user ${userId || 'UNKNOWN'} in tenant ${tenantId || 'UNKNOWN'}`);
         context.log.error(`Error Type: ${error.name}`);
         context.log.error(`Error Message: ${error.message}`);
         if (error.statusCode) context.log.error(`Status Code: ${error.statusCode}`);
@@ -111,9 +135,17 @@ module.exports = async function (context, req) {
         }
         context.log.error("-------------------- ERROR End ----------------------");
 
+        // More descriptive error message based on specific failure reasons
+        let errorMessage = "Errore interno del server durante la verifica dello stato amministratore.";
+        if (error.message.includes("Tenant ID not found")) {
+            errorMessage = "Impossibile determinare il tenant ID dell'utente. Verificare l'autenticazione.";
+        } else if (error.message.includes("UserID not found")) {
+            errorMessage = "Impossibile determinare l'ID utente. Verificare l'autenticazione.";
+        }
+
         context.res = {
             status: 500,
-            body: { message: "Errore interno del server durante la verifica dello stato amministratore." }
+            body: { message: errorMessage }
         };
     }
 };
