@@ -35,7 +35,10 @@ async function checkAdminStatus(userId, tenantId) {
 
 ## 2. Modifica a `saveConfiguration`
 
-La funzione `saveConfiguration` sul backend è stata modificata per non dipendere più dall'header `x-ms-client-principal`. Ora accetta un parametro aggiuntivo `userDisplayName` nel corpo della richiesta.
+La funzione `saveConfiguration` sul backend è stata modificata per non dipendere più dall'header `x-ms-client-principal`. Ora accetta due parametri aggiuntivi nel corpo della richiesta:
+
+- `userDisplayName`: Il nome visualizzato dell'utente (per scopi di visualizzazione)
+- `userIdentifier`: Un identificatore univoco dell'utente (per tracciamento e audit)
 
 ### Esempio di modifica nel frontend:
 
@@ -47,9 +50,10 @@ async function saveConfiguration(sharepointUrls) {
     throw new Error('Tentativo di salvare la configurazione senza tenantId');
   }
   
-  // Ottieni il nome utente dall'account MSAL
+  // Ottieni il nome utente e l'identificatore dall'account MSAL
   const currentAccount = msalInstance.getActiveAccount();
   const userDisplayName = currentAccount ? currentAccount.name : 'Unknown User';
+  const userIdentifier = currentAccount ? (currentAccount.homeAccountId || currentAccount.username) : 'unknown';
   
   const response = await fetch('/api/saveConfiguration', {
     method: 'POST',
@@ -57,12 +61,26 @@ async function saveConfiguration(sharepointUrls) {
     body: JSON.stringify({
       tenantId: currentTenantId,
       sharepointUrls: sharepointUrls,
-      userDisplayName: userDisplayName // Aggiungi il nome dell'utente
+      userDisplayName: userDisplayName, // Aggiungi il nome dell'utente
+      userIdentifier: userIdentifier    // Aggiungi l'identificatore dell'utente
     })
   });
   
   return await response.json();
 }
+```
+
+### Informazioni salvate nel backend:
+
+```javascript
+// Nel backend, il configData ora include:
+const configData = {
+  tenantId,
+  sharepointSites: validUrls,
+  timestamp: new Date().toISOString(),
+  updatedBy: userIdentifier,             // Identificatore univoco dell'utente
+  updatedByDisplayName: userDisplayName  // Nome visualizzato dell'utente
+};
 ```
 
 ## 3. Implementazione Logout MSAL
@@ -116,4 +134,5 @@ async function handleSuccessfulToken(response) {
 - Le funzioni del backend sono state modificate per non dipendere più dall'header `x-ms-client-principal`
 - Assicurarsi che sia presente una gestione errori adeguata
 - Ricordarsi di passare `userId` e `tenantId` in tutti i punti dove `checkAdminStatus` viene chiamato
-- Per `saveConfiguration`, assicurarsi di passare anche `userDisplayName` dal frontend 
+- Per `saveConfiguration`, assicurarsi di passare anche `userDisplayName` e `userIdentifier` dal frontend
+- L'identificatore utente viene sanitizzato nel backend prima di essere salvato 

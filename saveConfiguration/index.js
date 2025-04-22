@@ -23,7 +23,9 @@ module.exports = async function (context, req) {
         return;
     }
 
-    const { tenantId, sharepointUrls, userDisplayName } = req.body;
+    const { tenantId, sharepointUrls, userDisplayName, userIdentifier } = req.body;
+    // Extract userIdentifier from request body, with fallback to 'unknown'
+    const sanitizedUserIdentifier = (userIdentifier || '').replace(/[^\w\s@.-]/g, '') || 'unknown';
 
     if (!tenantId || typeof tenantId !== 'string') {
         context.log.error('Invalid or missing tenantId in request body.');
@@ -117,7 +119,8 @@ module.exports = async function (context, req) {
             tenantId,
             sharepointSites: validUrls,
             timestamp: new Date().toISOString(),
-            updatedBy: userDisplayName || 'Unknown User' // Use userDisplayName from request body if provided
+            updatedBy: sanitizedUserIdentifier,
+            updatedByDisplayName: userDisplayName || 'Unknown User'
         };
         
         // Upload to blob storage
