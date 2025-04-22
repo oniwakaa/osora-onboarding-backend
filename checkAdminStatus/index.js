@@ -23,6 +23,26 @@ module.exports = async function (context, req) {
     let tenantId = null;
     let isAdmin = false;
 
+    // Extract userId and tenantId from query parameters or request body
+    if (req.query && req.query.userId && req.query.tenantId) {
+        userId = req.query.userId;
+        tenantId = req.query.tenantId;
+    } else if (req.body && req.body.userId && req.body.tenantId) {
+        userId = req.body.userId;
+        tenantId = req.body.tenantId;
+    }
+
+    // Validate userId and tenantId are provided
+    if (!userId || !tenantId) {
+        context.log.warn("Missing userId or tenantId parameters.");
+        context.res = { 
+            status: 400, 
+            body: { message: "userId and tenantId parameters are required." } 
+        };
+        return;
+    }
+
+    // Optional: still check the x-ms-client-principal header as additional security verification
     const clientPrincipalHeader = req.headers['x-ms-client-principal'];
     if (!clientPrincipalHeader) {
         context.log.warn("Missing x-ms-client-principal header.");
@@ -31,32 +51,6 @@ module.exports = async function (context, req) {
     }
 
     try {
-        const header = Buffer.from(clientPrincipalHeader, 'base64').toString('ascii');
-        const clientPrincipal = JSON.parse(header);
-        
-        // Inspect the client principal structure
-        context.log(`Client principal structure: ${JSON.stringify(clientPrincipal, null, 2)}`);
-        
-        userId = clientPrincipal.userId;
-        context.log(`User OID extracted from header: ${userId}`);
-
-        if (!userId) {
-             throw new Error("UserID not found in client principal.");
-        }
-        
-        // Extract tenant ID from claims
-        if (clientPrincipal.claims && Array.isArray(clientPrincipal.claims)) {
-            const tidClaim = clientPrincipal.claims.find(claim => claim.typ === 'tid' || claim.type === 'tid');
-            if (tidClaim) {
-                tenantId = tidClaim.val || tidClaim.value;
-                context.log(`Tenant ID extracted from claims: ${tenantId}`);
-            }
-        }
-        
-        if (!tenantId) {
-            throw new Error("Tenant ID not found in client principal claims.");
-        }
-
         // *** MODIFICA: Ottieni la credenziale SENZA parametri ***
         // Lascia che DefaultAzureCredential scopra la MI assegnata al sistema
         // della Function App dall'ambiente.
@@ -81,11 +75,6 @@ module.exports = async function (context, req) {
         };
 
         const graphClient = Client.initWithMiddleware({ authProvider: authProvider });
-
-        // Ensure tenantId is defined and non-empty before constructing the URL
-        if (!tenantId) {
-            throw new Error("tenantId is required for Graph API call");
-        }
         
         // Use absolute URL with tenant ID included in the path for proper multi-tenant support
         const graphApiUrl = `https://graph.microsoft.com/v1.0/tenants/${tenantId}/users/${userId}/transitiveMemberOf/microsoft.graph.directoryRole`;

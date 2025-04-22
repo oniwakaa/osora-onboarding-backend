@@ -4,6 +4,7 @@
 
 # Dipendenze Node.js (devono essere installate nell'ambiente Azure)
 
+
 # Impostazioni locali e segreti (non distribuire mai!)
 local.settings.json
 *.env
