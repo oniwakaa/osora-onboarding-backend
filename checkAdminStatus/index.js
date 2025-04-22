@@ -42,13 +42,13 @@ module.exports = async function (context, req) {
         return;
     }
 
-    // Optional: still check the x-ms-client-principal header as additional security verification
-    const clientPrincipalHeader = req.headers['x-ms-client-principal'];
-    if (!clientPrincipalHeader) {
-        context.log.warn("Missing x-ms-client-principal header.");
-        context.res = { status: 401, body: { message: "Utente non autenticato." } };
-        return;
-    }
+    // // Optional: still check the x-ms-client-principal header as additional security verification
+    // const clientPrincipalHeader = req.headers['x-ms-client-principal'];
+    // if (!clientPrincipalHeader) {
+    //     context.log.warn("Missing x-ms-client-principal header.");
+    //     context.res = { status: 401, body: { message: "Utente non autenticato." } };
+    //     return;
+    // }
 
     try {
         // *** MODIFICA: Ottieni la credenziale SENZA parametri ***
